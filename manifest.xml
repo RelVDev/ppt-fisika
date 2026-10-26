@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ganti semua "GANTI-USERNAME" dengan username GitHub Anda (Ctrl+H -> Replace All). -->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:type="ContentApp">
+
+  <Id>06afc4dc-c284-4115-aded-95aa6fe33ac9</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Live Web</ProviderName>
+  <DefaultLocale>id-ID</DefaultLocale>
+  <DisplayName DefaultValue="Live Web"/>
+  <Description DefaultValue="Tampilkan halaman web live di slide: penuh, tanpa border, bersih."/>
+  <IconUrl DefaultValue="https://GANTI-USERNAME.github.io/live-web-addin/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://GANTI-USERNAME.github.io/live-web-addin/assets/icon-64.png"/>
+  <SupportUrl DefaultValue="https://GANTI-USERNAME.github.io/live-web-addin/"/>
+
+  <AppDomains>
+    <AppDomain>https://GANTI-USERNAME.github.io</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Presentation"/>
+  </Hosts>
+
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://GANTI-USERNAME.github.io/live-web-addin/index.html"/>
+    <RequestedWidth>960</RequestedWidth>
+    <RequestedHeight>540</RequestedHeight>
+  </DefaultSettings>
+
+  <Permissions>ReadWriteDocument</Permissions>
+</OfficeApp>
