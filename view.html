@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Web</title>
+<script src="https://appsforoffice.officeapps.live.com/lib/1/hosted/office.js"></script>
+<style>
+  :root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--card:#fff;--line:#d0d7de;--accent:#0b57d0;--accent-fg:#fff;--hover:#f0f3f6;--bad:#d93025}
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#14161a;--fg:#e6e8eb;--muted:#9aa1a9;--card:#1d2026;--line:#363b44;--accent:#8ab4f8;--accent-fg:#0b1220;--hover:#282c34;--bad:#f28b82}
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+  button{font:inherit;color:inherit;cursor:pointer}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* Halaman web: penuh, tanpa border */
+  #frame{position:absolute;inset:0;width:100%;height:100%;border:0;margin:0;padding:0;display:none;background:#fff}
+  #empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted)}
+  html.edit #empty.show{display:flex}
+
+  /* Address bar (mode edit) */
+  #bar{position:absolute;top:0;left:0;right:0;height:40px;z-index:6;display:none;align-items:center;gap:6px;padding:0 8px;
+    background:var(--card);border-bottom:1px solid var(--line)}
+  html.edit.bar-on #bar{display:flex}
+  #url{flex:1;min-width:0;height:28px;border:1px solid var(--line);border-radius:14px;padding:0 12px;background:var(--bg);color:var(--fg);font:inherit}
+  #url.bad{border-color:var(--bad)}
+  .ib{width:28px;height:28px;border:0;border-radius:50%;background:transparent;display:grid;place-items:center;padding:0;flex:none}
+  .ib:hover{background:var(--hover)}
+  #btnGo{height:28px;padding:0 14px;border:0;border-radius:14px;background:var(--accent);color:var(--accent-fg);font-weight:600;flex:none}
+
+  /* Tombol pojok (edit saat bar disembunyikan, atau presentasi bila diaktifkan) */
+  #zone{position:absolute;top:0;right:0;width:52px;height:52px;z-index:5;display:none}
+  html.edit:not(.bar-on) #zone,html.read.show-menu #zone{display:block}
+  #gear{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--card);
+    display:grid;place-items:center;padding:0;opacity:0;transition:opacity .15s}
+  #zone:hover #gear,#gear:focus-visible{opacity:1}
+
+  /* Menu daftar URL */
+  #menu{position:absolute;top:46px;right:8px;width:min(360px,calc(100% - 16px));max-height:calc(100% - 56px);overflow:auto;z-index:10;display:none;
+    background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
+  #menu.open{display:block}
+  .mh{font-weight:600;padding:4px 8px 6px}
+  #items{list-style:none;margin:0;padding:0}
+  #items li{display:flex;align-items:center;gap:2px}
+  .item{flex:1;min-width:0;text-align:left;border:0;background:transparent;border-radius:6px;padding:6px 8px;display:flex;flex-direction:column}
+  .item:hover,.del:hover{background:var(--hover)}
+  .item.on .t{color:var(--accent)}
+  .item .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item .u{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .del{border:0;background:transparent;border-radius:6px;width:28px;height:28px;color:var(--muted);flex:none}
+  html.read .del{display:none}
+  #noitems{color:var(--muted);padding:4px 8px 8px}
+  .edit-only{display:none;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+  html.edit .edit-only{display:block}
+  .full{width:100%;height:32px;border:1px solid var(--line);border-radius:6px;background:var(--card);margin-bottom:10px}
+  .full:hover{background:var(--hover)}
+  .fl{display:block;font-weight:600;margin:0 0 4px 2px}
+  select{width:100%;height:32px;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--bg);color:var(--fg);font:inherit;margin-bottom:10px}
+  .chk{display:flex;gap:8px;align-items:flex-start;padding:0 2px;color:var(--fg)}
+  .chk input{margin-top:3px}
+  .hint{color:var(--muted);font-size:12px;margin:10px 2px 0}
+</style>
+</head>
+<body>
+  <iframe id="frame" title="Live Web"
+    allow="autoplay; fullscreen; clipboard-write; encrypted-media; picture-in-picture; geolocation"
+    allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+  <div id="empty">Ketik alamat web di bar atas, lalu tekan Enter.</div>
+
+  <div id="bar">
+    <button class="ib" id="btnCollapse" title="Sembunyikan bar" aria-label="Sembunyikan bar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg></button>
+    <input type="text" id="url" placeholder="Ketik URL, contoh: example.com" autocomplete="off" spellcheck="false" aria-label="Alamat web">
+    <button id="btnGo">Buka</button>
+    <button class="ib" id="btnReload" title="Muat ulang" aria-label="Muat ulang">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+    <button class="ib" id="btnList" title="Daftar URL" aria-label="Daftar URL">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  </div>
+
+  <div id="zone"><button id="gear" title="Menu Live Web" aria-label="Menu Live Web">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+
+  <div id="menu" role="menu" aria-label="Daftar URL">
+    <div class="mh">Daftar URL</div>
+    <ul id="items"></ul>
+    <div id="noitems">Belum ada URL tersimpan.</div>
+    <div class="edit-only">
+      <button class="full" id="btnAdd">Simpan URL yang sedang tampil</button>
+      <label class="fl" for="refresh">Muat ulang otomatis</label>
+      <select id="refresh">
+        <option value="0">Tidak</option><option value="10">Setiap 10 detik</option><option value="30">Setiap 30 detik</option>
+        <option value="60">Setiap 1 menit</option><option value="300">Setiap 5 menit</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="showInShow"><span>Tampilkan menu daftar saat presentasi (muncul saat kursor di pojok kanan atas)</span></label>
+      <p class="hint">Situs yang memblokir penyematan (iframe) tidak akan tampil. Link YouTube dan Vimeo diubah otomatis ke versi embed.</p>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var root = document.documentElement;
+  var S = { url: "", refresh: 0, list: [], show: false };
+  var view = "edit", timer = null, booted = false;
+
+  /* ---------- URL ---------- */
+  function normalize(raw) {
+    var u = (raw || "").trim();
+    if (!u) return "";
+    if (!/^[a-z][a-z0-9+.\-]*:\/\//i.test(u)) u = "https://" + u;
+    var x;
+    try { x = new URL(u); } catch (e) { return ""; }
+    if (x.protocol !== "https:" && x.protocol !== "http:") return "";
+    var local = /^(localhost|127\.0\.0\.1)$/.test(x.hostname);
+    if (x.protocol === "http:" && !local) x.protocol = "https:";
+    var h = x.hostname.replace(/^www\./, "");
+    if (h === "youtube.com" && x.pathname === "/watch" && x.searchParams.get("v"))
+      return "https://www.youtube.com/embed/" + x.searchParams.get("v") + "?rel=0";
+    if (h === "youtu.be" && x.pathname.length > 1)
+      return "https://www.youtube.com/embed/" + x.pathname.slice(1) + "?rel=0";
+    if (h === "vimeo.com" && /^\/\d+/.test(x.pathname))
+      return "https://player.vimeo.com/video/" + x.pathname.slice(1).split("/")[0];
+    return x.href;
+  }
+  function nameOf(u) {
+    try { var x = new URL(u); var n = x.hostname.replace(/^www\./, ""); return n + (x.pathname.length > 1 ? x.pathname.slice(0, 24) : ""); }
+    catch (e) { return u; }
+  }
+
+  /* ---------- Penyimpanan (di dalam file .pptx) ---------- */
+  function load() {
+    try {
+      var s = Office.context.document.settings;
+      S.url = s.get("lw_url") || "";
+      S.refresh = Number(s.get("lw_refresh")) || 0;
+      S.show = s.get("lw_show") === true;
+      try { S.list = JSON.parse(s.get("lw_list") || "[]"); } catch (e) { S.list = []; }
+    } catch (e) {
+      try { var a = JSON.parse(localStorage.getItem("lw_all") || "{}"); S.url = a.url || ""; S.refresh = a.refresh || 0; S.list = a.list || []; S.show = !!a.show; } catch (_) {}
+    }
+    if (!Array.isArray(S.list)) S.list = [];
+  }
+  function save() {
+    try {
+      var s = Office.context.document.settings;
+      s.set("lw_url", S.url); s.set("lw_refresh", S.refresh);
+      s.set("lw_list", JSON.stringify(S.list)); s.set("lw_show", S.show);
+      s.saveAsync(function () {});
+    } catch (e) { try { localStorage.setItem("lw_all", JSON.stringify(S)); } catch (_) {} }
+  }
+  function persist() { if (view === "edit") save(); } // saat presentasi, pergantian URL tidak mengubah file
+
+  /* ---------- Tampilan ---------- */
+  function render() {
+    var f = $("frame");
+    clearInterval(timer);
+    if (S.url) {
+      if (f.dataset.u !== S.url) { f.dataset.u = S.url; f.src = S.url; }
+      f.style.display = "block";
+      $("empty").classList.remove("show");
+      if (S.refresh > 0) timer = setInterval(reload, S.refresh * 1000);
+    } else {
+      f.removeAttribute("src"); f.dataset.u = ""; f.style.display = "none";
+      $("empty").classList.add("show");
+    }
+    if (document.activeElement !== $("url")) $("url").value = S.url;
+  }
+  function reload() {
+    if (!S.url) return;
+    var f = $("frame");
+    try { f.contentWindow.location.replace(S.url); } catch (e) { f.src = S.url; }
+  }
+  function go(u) { S.url = u; persist(); render(); renderList(); }
+
+  function renderList() {
+    var ul = $("items"); ul.textContent = "";
+    $("noitems").style.display = S.list.length ? "none" : "block";
+    S.list.forEach(function (it, i) {
+      var li = document.createElement("li");
+      var b = document.createElement("button"); b.type = "button"; b.className = "item" + (it.u === S.url ? " on" : "");
+      var t = document.createElement("span"); t.className = "t"; t.textContent = it.n;
+      var u = document.createElement("span"); u.className = "u"; u.textContent = it.u;
+      b.appendChild(t); b.appendChild(u);
+      b.addEventListener("click", function () { go(it.u); closeMenu(); });
+      var d = document.createElement("button"); d.type = "button"; d.className = "del"; d.title = "Hapus"; d.setAttribute("aria-label", "Hapus");
+      d.textContent = "\u00d7";
+      d.addEventListener("click", function () { S.list.splice(i, 1); persist(); renderList(); });
+      li.appendChild(b); li.appendChild(d); ul.appendChild(li);
+    });
+  }
+
+  function setView(v) {
+    view = v === "read" ? "read" : "edit";
+    root.classList.toggle("edit", view === "edit");
+    root.classList.toggle("read", view === "read");
+    root.classList.toggle("bar-on", view === "edit");
+    root.classList.toggle("show-menu", view === "read" && S.show);
+    closeMenu(); render(); renderList();
+  }
+
+  /* ---------- Menu ---------- */
+  function openMenu() {
+    $("refresh").value = String(S.refresh); $("showInShow").checked = S.show;
+    renderList(); $("menu").classList.add("open");
+  }
+  function closeMenu() { $("menu").classList.remove("open"); }
+  function toggleMenu() { $("menu").classList.contains("open") ? closeMenu() : openMenu(); }
+
+  function submitUrl() {
+    var u = normalize($("url").value);
+    if (!u) { var el = $("url"); el.classList.add("bad"); setTimeout(function () { el.classList.remove("bad"); }, 1500); return; }
+    go(u); $("url").blur();
+  }
+
+  $("btnGo").addEventListener("click", submitUrl);
+  $("url").addEventListener("keydown", function (e) { if (e.key === "Enter") submitUrl(); });
+  $("btnReload").addEventListener("click", reload);
+  $("btnList").addEventListener("click", toggleMenu);
+  $("btnCollapse").addEventListener("click", function () { root.classList.remove("bar-on"); closeMenu(); });
+  $("gear").addEventListener("click", function () {
+    if (view === "edit") root.classList.add("bar-on"); else toggleMenu();
+  });
+  $("btnAdd").addEventListener("click", function () {
+    if (!S.url) return;
+    if (!S.list.some(function (x) { return x.u === S.url; })) S.list.push({ n: nameOf(S.url), u: S.url });
+    persist(); renderList();
+  });
+  $("refresh").addEventListener("change", function () { S.refresh = Number(this.value) || 0; persist(); render(); });
+  $("showInShow").addEventListener("change", function () { S.show = this.checked; persist(); });
+  document.addEventListener("mousedown", function (e) {
+    if (!$("menu").contains(e.target) && e.target.closest && !e.target.closest("#btnList,#gear")) closeMenu();
+  });
+  window.addEventListener("blur", closeMenu); // klik ke dalam halaman web menutup menu
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenu(); });
+
+  /* ---------- Mulai ---------- */
+  function boot(v) { if (booted) return; booted = true; load(); setView(v || "edit"); }
+  Office.onReady(function () {
+    try {
+      Office.context.document.getActiveViewAsync(function (r) { boot(r && r.status === "succeeded" ? r.value : "edit"); });
+      Office.context.document.addHandlerAsync(Office.EventType.ActiveViewChanged, function (e) { setView(e.activeView); });
+    } catch (e) { boot("edit"); }
+  });
+  window.addEventListener("load", function () { setTimeout(function () { boot("edit"); }, 2500); });
+})();
+</script>
+</body>
+</html>
